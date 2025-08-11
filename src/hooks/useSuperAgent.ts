@@ -50,7 +50,7 @@ export function useSuperAgent(submissionId: string) {
     const startStage = async (stage: StageName) => {
       setCurrentStage(stage);
       setStage(stage, { status: "running", startedAt: now() });
-      await delay(700);
+      await delay(1200 + Math.round(randomBetween(300, 1200)));
     };
 
     try {

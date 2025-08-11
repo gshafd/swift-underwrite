@@ -7,7 +7,8 @@ import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-
+import { Progress } from "@/components/ui/progress";
+import { Loader2 } from "lucide-react";
 const StageBadge = ({ label, status }: { label: string; status: string }) => {
   const color =
     status === "done"
@@ -17,7 +18,12 @@ const StageBadge = ({ label, status }: { label: string; status: string }) => {
       : status === "error"
       ? "text-destructive"
       : "text-muted-foreground";
-  return <span className={`text-xs ${color}`}>{label}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs ${color}`}>
+      {status === "running" && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+      {label}
+    </span>
+  );
 };
 
 const JSONBlock = ({ data }: { data: any }) => (
@@ -29,7 +35,7 @@ const JSONBlock = ({ data }: { data: any }) => (
 const SubmissionDetail = () => {
   const { id } = useParams();
   const [submission, setSubmission] = useState<Submission | null>(null);
-  const { run, running, snapshot } = useSuperAgent(id!);
+  const { run, running, snapshot, currentStage } = useSuperAgent(id!);
 
   useEffect(() => {
     const s = getSubmission(id!);
@@ -43,6 +49,16 @@ const SubmissionDetail = () => {
   const title = useMemo(() => (submission ? `${submission.insuredName} – Submission` : "Submission"), [submission]);
 
   if (!submission) return null;
+
+  const stagesOrder: Array<keyof Submission["stages"]> = [
+    "intake",
+    "risk",
+    "coverage",
+    "rate",
+    "communication",
+  ];
+  const doneCount = stagesOrder.filter((k) => submission.stages[k].status === "done").length;
+  const progressValue = Math.round(((doneCount + (running ? 0.5 : 0)) / stagesOrder.length) * 100);
 
   return (
     <main className="container py-10 space-y-6">
@@ -63,6 +79,17 @@ const SubmissionDetail = () => {
           </Button>
         </CardHeader>
         <CardContent>
+          {running && (
+            <div className="mb-4 flex items-center justify-between rounded-md border bg-muted/40 p-3">
+              <div className="text-sm">
+                AI Super Agent is running: <span className="font-medium capitalize">{currentStage}</span>
+              </div>
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          <div className="mb-4">
+            <Progress value={progressValue} aria-label="Agent progress" />
+          </div>
           <div className="grid gap-3 md:grid-cols-5">
             <div className="space-y-1">
               <div className="font-medium">1. Intake</div>

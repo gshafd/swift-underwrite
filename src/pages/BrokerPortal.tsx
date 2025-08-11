@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { Submission, StageResult } from "@/types/submission";
 import { saveSubmission } from "@/lib/storage";
 import { toast } from "@/hooks/use-toast";
@@ -18,11 +18,11 @@ const emptyStages: Record<"intake" | "risk" | "coverage" | "rate" | "communicati
 };
 
 const BrokerPortal = () => {
-  const navigate = useNavigate();
   const [brokerName, setBrokerName] = useState("");
   const [insuredName, setInsuredName] = useState("");
   const [operationType, setOperationType] = useState("Local Delivery");
   const [docs, setDocs] = useState<FileList | null>(null);
+  const [submittedId, setSubmittedId] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,8 +44,8 @@ const BrokerPortal = () => {
     };
 
     saveSubmission(submission);
-    toast({ title: "Submission received", description: `${insuredName} created.` });
-    navigate(`/underwriter/submission/${id}`);
+    toast({ title: "Submission received", description: `${insuredName} has been submitted for underwriting.` });
+    setSubmittedId(id);
   };
 
   return (
@@ -62,29 +62,40 @@ const BrokerPortal = () => {
             <CardDescription>Upload your submission package to start underwriting.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="broker">Broker Name</Label>
-                  <Input id="broker" value={brokerName} onChange={(e) => setBrokerName(e.target.value)} placeholder="e.g., Johnson & Co." />
+{submittedId ? (
+              <div className="space-y-4">
+                <div className="rounded-md border bg-muted/40 p-4">
+                  <p className="text-sm">Your documents have been submitted.</p>
+                  <p className="text-sm">Reference ID: <span className="font-mono">{submittedId.slice(0, 8)}</span></p>
+                  <p className="text-sm text-muted-foreground">An underwriter at the carrier will review and get back to you.</p>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="insured">Insured Name</Label>
-                  <Input id="insured" value={insuredName} onChange={(e) => setInsuredName(e.target.value)} placeholder="e.g., Acme Logistics LLC" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="op">Operation Type</Label>
-                  <Input id="op" value={operationType} onChange={(e) => setOperationType(e.target.value)} placeholder="Local Delivery" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="docs">Submission Package (PDF, XLSX)</Label>
-                  <Input id="docs" type="file" multiple onChange={(e) => setDocs(e.target.files)} />
-                </div>
+                <div className="text-sm text-muted-foreground">You may close this page; no further action is needed.</div>
               </div>
-              <div className="flex justify-end">
-                <Button type="submit" variant="default">Submit for Underwriting</Button>
-              </div>
-            </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="broker">Broker Name</Label>
+                    <Input id="broker" value={brokerName} onChange={(e) => setBrokerName(e.target.value)} placeholder="e.g., Johnson & Co." />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="insured">Insured Name</Label>
+                    <Input id="insured" value={insuredName} onChange={(e) => setInsuredName(e.target.value)} placeholder="e.g., Acme Logistics LLC" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="op">Operation Type</Label>
+                    <Input id="op" value={operationType} onChange={(e) => setOperationType(e.target.value)} placeholder="Local Delivery" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="docs">Submission Package (PDF, XLSX)</Label>
+                    <Input id="docs" type="file" multiple onChange={(e) => setDocs(e.target.files)} />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button type="submit" variant="default">Submit for Underwriting</Button>
+                </div>
+              </form>
+            )}
           </CardContent>
         </Card>
       </section>
