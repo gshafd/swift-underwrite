@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { getSubmission } from "@/lib/storage";
 import { useEffect, useMemo, useState } from "react";
 import { Submission } from "@/types/submission";
@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
+import RiskGauge from "@/components/underwriting/RiskGauge";
+import FileThumb from "@/components/underwriting/FileThumb";
 const StageBadge = ({ label, status }: { label: string; status: string }) => {
   const color =
     status === "done"
@@ -34,6 +37,7 @@ const JSONBlock = ({ data }: { data: any }) => (
 
 const SubmissionDetail = () => {
   const { id } = useParams();
+  const [search] = useSearchParams();
   const [submission, setSubmission] = useState<Submission | null>(null);
   const { run, running, snapshot, currentStage } = useSuperAgent(id!);
 
@@ -45,6 +49,14 @@ const SubmissionDetail = () => {
   useEffect(() => {
     if (snapshot) setSubmission(snapshot);
   }, [snapshot]);
+
+  useEffect(() => {
+    if (!id) return;
+    const shouldAuto = search.get("autoRun") === "1";
+    if (shouldAuto && !running && submission && submission.status !== "completed") {
+      run();
+    }
+  }, [search, running, submission, run, id]);
 
   const title = useMemo(() => (submission ? `${submission.insuredName} – Submission` : "Submission"), [submission]);
 
@@ -115,15 +127,84 @@ const SubmissionDetail = () => {
         </CardContent>
       </Card>
 
+      <Card className="border-foreground/10">
+        <CardHeader>
+          <CardTitle>Submission Package</CardTitle>
+          <CardDescription>Attached documents</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {submission.documents && submission.documents.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {submission.documents.map((d, idx) => (
+                <FileThumb key={`${d.name}-${idx}`} name={d.name} type={d.type} size={d.size} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No files uploaded.</div>
+          )}
+        </CardContent>
+      </Card>
+
       <section className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Intake Output</CardTitle>
-            <CardDescription>Extracted data + confidence</CardDescription>
+            <CardTitle>Intake Summary</CardTitle>
+            <CardDescription>Extracted details from submission</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {submission.stages.intake.output ? (
-              <JSONBlock data={submission.stages.intake.output} />
+              (() => {
+                const io = submission.stages.intake.output;
+                const vehicles = io.vehicles?.items ?? [];
+                const drivers = io.drivers?.items ?? [];
+                const loss = io.loss_history?.items ?? [];
+                const avgVehAge = vehicles.length
+                  ? (
+                      vehicles.reduce((acc: number, v: any) => acc + (new Date().getFullYear() - (v.year || new Date().getFullYear())), 0) /
+                      vehicles.length
+                    ).toFixed(1)
+                  : "-";
+                const driverAvgAge = drivers.length
+                  ? (
+                      drivers.reduce((acc: number, d: any) => acc + (d.age || 0), 0) / drivers.length
+                    ).toFixed(1)
+                  : "-";
+                const totalPaid = loss.reduce((acc: number, l: any) => acc + (l.incurred || 0), 0);
+
+                return (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <div className="text-sm font-medium mb-2">Insured Details</div>
+                      <div className="text-sm text-muted-foreground">
+                        <div>Name: {io.insured_info?.insured_name}</div>
+                        <div>Operation: {io.insured_info?.operation_type}</div>
+                        <div>Confidence: {io.insured_info?.confidence}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-2">Vehicle Summary</div>
+                      <div className="text-sm text-muted-foreground">
+                        <div>Count: {vehicles.length}</div>
+                        <div>Avg Age: {avgVehAge}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-2">Driver Summary</div>
+                      <div className="text-sm text-muted-foreground">
+                        <div>Count: {drivers.length}</div>
+                        <div>Avg Age: {driverAvgAge}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-2">Loss History</div>
+                      <div className="text-sm text-muted-foreground">
+                        <div>Claims: {loss.length}</div>
+                        <div>Total Incurred: ${'{'}totalPaid.toLocaleString(){'}'}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
             ) : (
               <div className="text-sm text-muted-foreground">Not available yet.</div>
             )}
@@ -132,12 +213,29 @@ const SubmissionDetail = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Risk Score</CardTitle>
-            <CardDescription>Band and applied rules</CardDescription>
+            <CardTitle>Risk Scoring</CardTitle>
+            <CardDescription>Score, band, and top drivers</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {submission.stages.risk.output ? (
-              <JSONBlock data={submission.stages.risk.output} />
+              (() => {
+                const ro = submission.stages.risk.output;
+                const bandText = ro.risk_band === "A" ? "Low" : ro.risk_band === "B" ? "Moderate" : "High";
+                const drivers = (ro.applied_rules || []).slice(0, 5);
+                return (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <RiskGauge value={ro.overall_risk_score} label={`Band: ${ro.risk_band} (${bandText})`} />
+                    <div>
+                      <div className="text-sm font-medium mb-2">Top Risk Drivers</div>
+                      <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                        {drivers.map((r: any, idx: number) => (
+                          <li key={idx}>{r.message}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })()
             ) : (
               <div className="text-sm text-muted-foreground">Not available yet.</div>
             )}
@@ -151,7 +249,32 @@ const SubmissionDetail = () => {
           </CardHeader>
           <CardContent>
             {submission.stages.coverage.output ? (
-              <JSONBlock data={submission.stages.coverage.output} />
+              (() => {
+                const co = submission.stages.coverage.output;
+                const recs = co.recommended || [];
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Coverage</TableHead>
+                        <TableHead>Limit</TableHead>
+                        <TableHead>Deductible</TableHead>
+                        <TableHead>KB Rule</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recs.map((r: any, idx: number) => (
+                        <TableRow key={idx}>
+                          <TableCell>{r.coverage}</TableCell>
+                          <TableCell>{r.limits}</TableCell>
+                          <TableCell>{r.deductible}</TableCell>
+                          <TableCell>{r.kb_rule_id}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                );
+              })()
             ) : (
               <div className="text-sm text-muted-foreground">Not available yet.</div>
             )}
@@ -163,9 +286,33 @@ const SubmissionDetail = () => {
             <CardTitle>Rate Justification</CardTitle>
             <CardDescription>Base + adjustments breakdown</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             {submission.stages.rate.output ? (
-              <JSONBlock data={submission.stages.rate.output} />
+              (() => {
+                const rj = submission.stages.rate.output;
+                return (
+                  <div className="space-y-3">
+                    <div className="text-sm text-muted-foreground">Base Rate: ${'{'}rj.base.toLocaleString(){'}'} ({rj.vehicleCount} vehicles @ ${'{'}rj.baseRatePerVehicle.toLocaleString(){'}'})</div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Adjustment</TableHead>
+                          <TableHead className="text-right">% Impact</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rj.adjustments.map((a: any) => (
+                          <TableRow key={a.id}>
+                            <TableCell>{a.label}</TableCell>
+                            <TableCell className="text-right">{a.amountPct}%</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <div className="text-base font-semibold">Final Premium: ${'{'}rj.premium.toLocaleString(){'}'}</div>
+                  </div>
+                );
+              })()
             ) : (
               <div className="text-sm text-muted-foreground">Not available yet.</div>
             )}
@@ -179,21 +326,45 @@ const SubmissionDetail = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {submission.stages.communication.output ? (
-              <>
-                <div>
-                  <div className="text-sm font-medium mb-2">proposal_package.pdf (preview)</div>
-                  <pre className="bg-muted/60 rounded-md p-4 text-xs overflow-auto max-h-64">
-                    {submission.stages.communication.output.proposal_package_pdf_preview}
-                  </pre>
-                </div>
-                <Separator />
-                <div>
-                  <div className="text-sm font-medium mb-2">email_body.txt</div>
-                  <pre className="bg-muted/60 rounded-md p-4 text-xs overflow-auto max-h-64">
-                    {submission.stages.communication.output.email_body}
-                  </pre>
-                </div>
-              </>
+              (() => {
+                const co = submission.stages.communication.output;
+                const download = (filename: string, content: string) => {
+                  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = filename;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                };
+                return (
+                  <>
+                    <div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="text-sm font-medium">proposal_package.pdf (preview)</div>
+                        <Button size="sm" variant="outline" onClick={() => download("proposal_package.pdf", co.proposal_package_pdf_preview)}>
+                          Download PDF
+                        </Button>
+                      </div>
+                      <pre className="bg-muted/60 rounded-md p-4 text-xs overflow-auto max-h-64">
+                        {co.proposal_package_pdf_preview}
+                      </pre>
+                    </div>
+                    <Separator />
+                    <div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="text-sm font-medium">email_body.txt (editable)</div>
+                        <Button size="sm" variant="outline" onClick={() => download("email_body.txt", co.email_body)}>
+                          Download Email
+                        </Button>
+                      </div>
+                      <textarea defaultValue={co.email_body} className="w-full rounded-md border bg-background p-3 text-sm" rows={8} />
+                    </div>
+                  </>
+                );
+              })()
             ) : (
               <div className="text-sm text-muted-foreground">Not available yet.</div>
             )}
