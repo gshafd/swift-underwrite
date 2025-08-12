@@ -29,6 +29,10 @@ export interface Submission {
   brokerName: string;
   insuredName: string;
   operationType?: string;
+  yearsInBusiness?: number;
+  primaryOperations?: string;
+  territories?: string[];
+  uwNotes?: string;
   documents: DocumentInfo[];
   createdAt: string;
   updatedAt: string;
