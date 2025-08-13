@@ -129,23 +129,39 @@ export function useSuperAgent(submissionId: string) {
 
       // 4. Rate
       await startStage("rate");
-      const baseRatePerVehicle = 1200;
+      const baseRatePerVehicle = Math.round(randomBetween(1000, 1500));
       const adjustments = [
         { id: "RJ-100", label: "Risk band adjustment", amountPct: band === "A" ? -10 : band === "B" ? 0 : 12 },
-        { id: "RJ-221", label: "Urban operation", amountPct: 8 },
-        { id: "RJ-330", label: "Telematics credit", amountPct: -5 },
+        { id: "RJ-221", label: "Urban operation", amountPct: Math.round(randomBetween(5, 12)) },
+        { id: "RJ-330", label: "Telematics credit", amountPct: Math.round(randomBetween(-8, -3)) },
+        { id: "RJ-445", label: "Fleet size discount", amountPct: vehicles.length >= 5 ? -5 : 0 },
       ];
       const base = baseRatePerVehicle * vehicles.length;
       const adjTotalPct = adjustments.reduce((acc, a) => acc + a.amountPct, 0);
       const premium = Math.round(base * (1 + adjTotalPct / 100));
-      const rateOutput = { base, baseRatePerVehicle, vehicleCount: vehicles.length, adjustments, premium };
+      const rateOutput = { 
+        base, 
+        baseRatePerVehicle, 
+        vehicleCount: vehicles.length, 
+        adjustments: adjustments.filter(a => a.amountPct !== 0), 
+        premium,
+        effectiveDate: new Date().toISOString().split('T')[0],
+        expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      };
       setStage("rate", { status: "done", output: rateOutput, finishedAt: now() });
 
       // 5. Communication
       await startStage("communication");
-      const proposalText = `Proposal for ${submission.insuredName}\n\nRecommended coverages: Liability, Physical Damage, Hired/Non-Owned.\nEstimated annual premium: $${premium.toLocaleString()}\n\nRationale: Risk band ${band} with applied credits/debits as per KB.`;
-      const emailBody = `Hi Broker,\n\nPlease find the proposal attached for ${submission.insuredName}. Estimated premium $${premium.toLocaleString()}.\n\nRegards,\nUnderwriting Team`;
-      const commsOutput = { proposal_package_pdf_preview: proposalText, email_body: emailBody };
+      const proposalText = `Commercial Auto Insurance Proposal\n\nInsured: ${submission.insuredName}\nBroker: ${submission.brokerName}\nOperation: ${submission.operationType || "Commercial Operations"}\n\nCoverage Summary:\n- Liability: ${band === "A" ? "$1,000,000 CSL" : "$750,000 CSL"}\n- Physical Damage: ACV with ${band === "A" ? "$1,000" : "$2,500"} deductible\n- Hired/Non-Owned Auto: $1,000,000\n\nPremium: $${premium.toLocaleString()}\nTerm: 12 Months\nEffective: ${new Date().toLocaleDateString()}\n\nRisk Assessment: Band ${band} (${band === "A" ? "Low" : band === "B" ? "Moderate" : "High"} Risk)\nVehicle Count: ${vehicles.length}\nBase Rate: $${baseRatePerVehicle.toLocaleString()} per vehicle\n\nThis proposal is valid for 30 days and subject to final underwriting approval.`;
+      
+      const emailBody = `Dear ${submission.brokerName},\n\nI hope this message finds you well. Please find attached the comprehensive commercial auto insurance proposal for your client, ${submission.insuredName}.\n\nProposal Summary:\n• Annual Premium: $${premium.toLocaleString()}\n• Coverage Term: 12 Months\n• Fleet Size: ${vehicles.length} vehicles\n• Risk Classification: Band ${band}\n\nKey Coverage Features:\n• Comprehensive liability protection\n• Physical damage coverage with competitive deductibles\n• Hired and non-owned auto coverage\n• Tailored to ${submission.operationType || "commercial operations"} operations\n\nNext Steps:\n1. Review the attached proposal details\n2. Discuss coverage options with your client\n3. Contact our underwriting team with any questions\n\nThis proposal reflects our competitive pricing and is valid for 30 days from the issue date. We're committed to providing excellent service and comprehensive coverage for your client's commercial auto needs.\n\nPlease don't hesitate to reach out if you need any clarification or would like to discuss additional coverage options.\n\nBest regards,\nUnderwriting Department\nAuto UW AI Solutions`;
+      
+      const commsOutput = { 
+        proposal_package_pdf_preview: proposalText, 
+        email_body: emailBody,
+        proposal_id: `PROP-${Date.now()}`,
+        generated_at: now()
+      };
       setStage("communication", {
         status: "done",
         output: commsOutput,
