@@ -79,8 +79,10 @@ const SubmissionDetail = () => {
 
   const title = useMemo(() => (submission ? `${submission.insuredName} – Submission` : "Submission"), [submission]);
 
-  const saveEdit = (stage: string, field: string, value: any) => {
+  const saveEdit = (stage: string, updates: any) => {
     if (!submission) return;
+    
+    const updatedOutput = { ...submission.stages[stage].output, ...updates };
     
     updateSubmission(id!, (prev) => ({
       ...prev,
@@ -88,10 +90,7 @@ const SubmissionDetail = () => {
         ...prev.stages,
         [stage]: {
           ...prev.stages[stage],
-          output: {
-            ...prev.stages[stage].output,
-            [field]: value,
-          },
+          output: updatedOutput,
         },
       },
     }));
@@ -103,10 +102,7 @@ const SubmissionDetail = () => {
           ...prev.stages,
           [stage]: {
             ...prev.stages[stage],
-            output: {
-              ...prev.stages[stage].output,
-              [field]: value,
-            },
+            output: updatedOutput,
           },
         },
       } : null
@@ -375,7 +371,48 @@ const SubmissionDetail = () => {
                   : "-";
                 const totalPaid = loss.reduce((acc: number, l: any) => acc + (l.incurred || 0), 0);
 
-                return (
+                return editMode === "intake" ? (
+                  <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <label className="text-sm font-medium">Insured Name</label>
+                        <Input
+                          value={editValues.insured_name || io.insured_info?.insured_name || ""}
+                          onChange={(e) => setEditValues({...editValues, insured_name: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Operation Type</label>
+                        <Input
+                          value={editValues.operation_type || io.insured_info?.operation_type || ""}
+                          onChange={(e) => setEditValues({...editValues, operation_type: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Confidence Level</label>
+                        <Input
+                          value={editValues.confidence || io.insured_info?.confidence || ""}
+                          onChange={(e) => setEditValues({...editValues, confidence: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => saveEdit("intake", {
+                        insured_info: {
+                          ...io.insured_info,
+                          insured_name: editValues.insured_name || io.insured_info?.insured_name,
+                          operation_type: editValues.operation_type || io.insured_info?.operation_type,
+                          confidence: editValues.confidence || io.insured_info?.confidence,
+                        }
+                      })}>
+                        Save Changes
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditMode(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <div className="text-sm font-medium mb-2">Insured Details</div>
@@ -454,7 +491,46 @@ const SubmissionDetail = () => {
                 const ro = submission.stages.risk.output;
                 const bandText = ro.risk_band === "A" ? "Low" : ro.risk_band === "B" ? "Moderate" : "High";
                 const drivers = (ro.applied_rules || []).slice(0, 5);
-                return (
+                
+                return editMode === "risk" ? (
+                  <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <label className="text-sm font-medium">Risk Score (0-100)</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={editValues.overall_risk_score || ro.overall_risk_score}
+                          onChange={(e) => setEditValues({...editValues, overall_risk_score: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Risk Band</label>
+                        <select 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                          value={editValues.risk_band || ro.risk_band}
+                          onChange={(e) => setEditValues({...editValues, risk_band: e.target.value})}
+                        >
+                          <option value="A">A (Low Risk)</option>
+                          <option value="B">B (Moderate Risk)</option>
+                          <option value="C">C (High Risk)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => saveEdit("risk", {
+                        overall_risk_score: editValues.overall_risk_score || ro.overall_risk_score,
+                        risk_band: editValues.risk_band || ro.risk_band,
+                      })}>
+                        Save Changes
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditMode(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
                   <div className="grid gap-4 md:grid-cols-2">
                     <RiskGauge value={ro.overall_risk_score} label={`Band: ${ro.risk_band} (${bandText})`} />
                     <div>
@@ -512,7 +588,62 @@ const SubmissionDetail = () => {
               (() => {
                 const co = submission.stages.coverage.output;
                 const recs = co.recommended || [];
-                return (
+                
+                return editMode === "coverage" ? (
+                  <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
+                    <div className="space-y-3">
+                      {recs.map((r: any, idx: number) => (
+                        <div key={idx} className="grid gap-2 md:grid-cols-4 border rounded p-3">
+                          <div>
+                            <label className="text-xs font-medium">Coverage</label>
+                            <Input
+                              value={editValues[`coverage_${idx}`] || r.coverage}
+                              onChange={(e) => setEditValues({...editValues, [`coverage_${idx}`]: e.target.value})}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium">Limit</label>
+                            <Input
+                              value={editValues[`limits_${idx}`] || r.limits}
+                              onChange={(e) => setEditValues({...editValues, [`limits_${idx}`]: e.target.value})}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium">Deductible</label>
+                            <Input
+                              value={editValues[`deductible_${idx}`] || r.deductible}
+                              onChange={(e) => setEditValues({...editValues, [`deductible_${idx}`]: e.target.value})}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium">KB Rule</label>
+                            <Input
+                              value={editValues[`kb_rule_${idx}`] || r.kb_rule_id}
+                              onChange={(e) => setEditValues({...editValues, [`kb_rule_${idx}`]: e.target.value})}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => {
+                        const updatedRecs = recs.map((r: any, idx: number) => ({
+                          ...r,
+                          coverage: editValues[`coverage_${idx}`] || r.coverage,
+                          limits: editValues[`limits_${idx}`] || r.limits,
+                          deductible: editValues[`deductible_${idx}`] || r.deductible,
+                          kb_rule_id: editValues[`kb_rule_${idx}`] || r.kb_rule_id,
+                        }));
+                        saveEdit("coverage", { recommended: updatedRecs });
+                      }}>
+                        Save Changes
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditMode(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -599,9 +730,30 @@ const SubmissionDetail = () => {
                               onChange={(e) => setEditValues({...editValues, premium: Number(e.target.value)})}
                             />
                           </div>
+                          <div>
+                            <label className="text-sm font-medium">Base Premium</label>
+                            <Input
+                              type="number"
+                              value={editValues.base || rj.base}
+                              onChange={(e) => setEditValues({...editValues, base: Number(e.target.value)})}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium">Vehicle Count</label>
+                            <Input
+                              type="number"
+                              value={editValues.vehicleCount || rj.vehicleCount}
+                              onChange={(e) => setEditValues({...editValues, vehicleCount: Number(e.target.value)})}
+                            />
+                          </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={() => saveEdit("rate", "baseRatePerVehicle", editValues.baseRatePerVehicle || rj.baseRatePerVehicle)}>
+                          <Button size="sm" onClick={() => saveEdit("rate", {
+                            baseRatePerVehicle: editValues.baseRatePerVehicle || rj.baseRatePerVehicle,
+                            premium: editValues.premium || rj.premium,
+                            base: editValues.base || rj.base,
+                            vehicleCount: editValues.vehicleCount || rj.vehicleCount,
+                          })}>
                             Save Changes
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => setEditMode(null)}>
@@ -764,7 +916,7 @@ Email: underwriting@autouvai.com`}
                             className="font-mono text-sm"
                           />
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => saveEdit("communication", "email_body", editValues.email_body)}>
+                            <Button size="sm" onClick={() => saveEdit("communication", { email_body: editValues.email_body })}>
                               Save Changes
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => setEditMode(null)}>
