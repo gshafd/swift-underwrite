@@ -12,6 +12,7 @@ import SubmissionDetail from "./pages/SubmissionDetail";
 import ProcessingQueue from "./pages/ProcessingQueue";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import QuoteApproval from "./pages/QuoteApproval";
 import Header from "@/components/layout/Header";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/broker" element={<BrokerPortal />} />
             <Route path="/underwriter" element={<UnderwriterPortal />} />
             <Route path="/underwriter/submission/:id" element={<SubmissionDetail />} />
+            <Route path="/underwriter/quote-approval/:id" element={<QuoteApproval />} />
             <Route path="/processing-queue" element={<ProcessingQueue />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />

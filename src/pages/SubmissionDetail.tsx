@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Download, Send, ArrowLeft, Loader2, Check, MessageSquare, X } from "lucide-react";
+import { Edit, Download, Send, ArrowLeft, Loader2, Check, MessageSquare, X, Eye, Brain } from "lucide-react";
 import BackButton from "@/components/common/BackButton";
 import Breadcrumbs from "@/components/common/Breadcrumbs";
 import AgentStepper from "@/components/underwriting/AgentStepper";
@@ -19,6 +19,9 @@ import RiskGauge from "@/components/underwriting/RiskGauge";
 import FileThumb from "@/components/underwriting/FileThumb";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
+import RequestInfoDialog from "@/components/dialogs/RequestInfoDialog";
+import FileViewerDialog from "@/components/dialogs/FileViewerDialog";
+import AgentDecisionDialog from "@/components/dialogs/AgentDecisionDialog";
 const StageBadge = ({ label, status }: { label: string; status: string }) => {
   const color =
     status === "done"
@@ -50,6 +53,11 @@ const SubmissionDetail = () => {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [editMode, setEditMode] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({});
+  const [requestInfoOpen, setRequestInfoOpen] = useState(false);
+  const [fileViewerOpen, setFileViewerOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{name: string, type?: string, size?: number} | null>(null);
+  const [agentDecisionOpen, setAgentDecisionOpen] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<{name: string, data: any} | null>(null);
   const { run, running, snapshot, currentStage } = useSuperAgent(id!);
 
   useEffect(() => {
@@ -252,7 +260,7 @@ const SubmissionDetail = () => {
                 onClick={() => {
                   updateSubmission(id!, (prev) => ({ ...prev, status: "quoted" }));
                   toast({ title: "Quote Approved", description: "Submission has been approved and quote issued." });
-                  navigate('/underwriter');
+                  navigate(`/underwriter/quote-approval/${id}`);
                 }}
                 className="gap-2"
               >
@@ -262,9 +270,7 @@ const SubmissionDetail = () => {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => {
-                  toast({ title: "Info Requested", description: "Additional information request sent to broker." });
-                }}
+                onClick={() => setRequestInfoOpen(true)}
                 className="gap-2"
               >
                 <MessageSquare className="h-4 w-4" />
@@ -297,7 +303,16 @@ const SubmissionDetail = () => {
           {submission.documents && submission.documents.length > 0 ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {submission.documents.map((d, idx) => (
-                <FileThumb key={`${d.name}-${idx}`} name={d.name} type={d.type} size={d.size} />
+                <div 
+                  key={`${d.name}-${idx}`} 
+                  onClick={() => {
+                    setSelectedFile({name: d.name, type: d.type, size: d.size});
+                    setFileViewerOpen(true);
+                  }}
+                  className="cursor-pointer"
+                >
+                  <FileThumb name={d.name} type={d.type} size={d.size} />
+                </div>
               ))}
             </div>
           ) : (
@@ -316,15 +331,29 @@ const SubmissionDetail = () => {
               </CardTitle>
               <CardDescription>Extracted details from submission</CardDescription>
             </div>
-            {submission.stages.intake.output && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditMode(editMode === "intake" ? null : "intake")}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {submission.stages.intake.output && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAgent({name: "intake", data: submission.stages.intake});
+                      setAgentDecisionOpen(true);
+                    }}
+                  >
+                    <Brain className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditMode(editMode === "intake" ? null : "intake")}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {submission.stages.intake.output ? (
@@ -395,15 +424,29 @@ const SubmissionDetail = () => {
               </CardTitle>
               <CardDescription>Score, band, and top drivers</CardDescription>
             </div>
-            {submission.stages.risk.output && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditMode(editMode === "risk" ? null : "risk")}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {submission.stages.risk.output && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAgent({name: "risk", data: submission.stages.risk});
+                      setAgentDecisionOpen(true);
+                    }}
+                  >
+                    <Brain className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditMode(editMode === "risk" ? null : "risk")}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {submission.stages.risk.output ? (
@@ -440,15 +483,29 @@ const SubmissionDetail = () => {
               </CardTitle>
               <CardDescription>Limits, deductibles, endorsements</CardDescription>
             </div>
-            {submission.stages.coverage.output && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditMode(editMode === "coverage" ? null : "coverage")}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {submission.stages.coverage.output && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAgent({name: "coverage", data: submission.stages.coverage});
+                      setAgentDecisionOpen(true);
+                    }}
+                  >
+                    <Brain className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditMode(editMode === "coverage" ? null : "coverage")}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {submission.stages.coverage.output ? (
@@ -493,15 +550,29 @@ const SubmissionDetail = () => {
               </CardTitle>
               <CardDescription>Base + adjustments breakdown</CardDescription>
             </div>
-            {submission.stages.rate.output && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditMode(editMode === "rate" ? null : "rate")}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {submission.stages.rate.output && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAgent({name: "rate", data: submission.stages.rate});
+                      setAgentDecisionOpen(true);
+                    }}
+                  >
+                    <Brain className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditMode(editMode === "rate" ? null : "rate")}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {submission.stages.rate.output ? (
@@ -582,6 +653,16 @@ const SubmissionDetail = () => {
             </div>
             {submission.stages.communication.output && (
               <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedAgent({name: "communication", data: submission.stages.communication});
+                    setAgentDecisionOpen(true);
+                  }}
+                >
+                  <Brain className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -732,6 +813,29 @@ Email: underwriting@autouvai.com`}
           </CardContent>
         </Card>
       </section>
+
+      {/* Dialogs */}
+      <RequestInfoDialog
+        open={requestInfoOpen}
+        onOpenChange={setRequestInfoOpen}
+        submissionId={id!}
+        insuredName={submission.insuredName}
+      />
+      
+      <FileViewerDialog
+        open={fileViewerOpen}
+        onOpenChange={setFileViewerOpen}
+        fileName={selectedFile?.name || ""}
+        fileType={selectedFile?.type}
+        fileSize={selectedFile?.size}
+      />
+      
+      <AgentDecisionDialog
+        open={agentDecisionOpen}
+        onOpenChange={setAgentDecisionOpen}
+        agentName={selectedAgent?.name || ""}
+        stageData={selectedAgent?.data}
+      />
     </main>
   );
 };

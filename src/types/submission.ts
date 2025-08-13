@@ -36,6 +36,6 @@ export interface Submission {
   documents: DocumentInfo[];
   createdAt: string;
   updatedAt: string;
-  status: "submitted" | "processing" | "completed" | "error" | "declined" | "quoted";
+  status: "submitted" | "processing" | "completed" | "error" | "declined" | "quoted" | "issued";
   stages: Record<StageName, StageResult>;
 }
