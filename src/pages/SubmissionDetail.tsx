@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { getSubmission, updateSubmission } from "@/lib/storage";
 import { useEffect, useMemo, useState } from "react";
 import { Submission } from "@/types/submission";
@@ -11,12 +11,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Download, Send, ArrowLeft, Loader2 } from "lucide-react";
+import { Edit, Download, Send, ArrowLeft, Loader2, Check, MessageSquare, X } from "lucide-react";
 import BackButton from "@/components/common/BackButton";
 import Breadcrumbs from "@/components/common/Breadcrumbs";
 import AgentStepper from "@/components/underwriting/AgentStepper";
 import RiskGauge from "@/components/underwriting/RiskGauge";
 import FileThumb from "@/components/underwriting/FileThumb";
+import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 const StageBadge = ({ label, status }: { label: string; status: string }) => {
   const color =
@@ -44,6 +45,8 @@ const JSONBlock = ({ data }: { data: any }) => (
 const SubmissionDetail = () => {
   const { id } = useParams();
   const [search] = useSearchParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [editMode, setEditMode] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({});
@@ -242,17 +245,44 @@ const SubmissionDetail = () => {
           />
           
           {(running || submission.stages.communication.status === "done") && (
-            <div className="flex items-center justify-center gap-4 pt-4">
+            <div className="flex items-center justify-center gap-3 pt-4">
               <Button
-                onClick={() => saveEdit("", "", "")}
-                variant="outline"
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  updateSubmission(id!, (prev) => ({ ...prev, status: "quoted" }));
+                  toast({ title: "Quote Approved", description: "Submission has been approved and quote issued." });
+                  navigate('/underwriter');
+                }}
                 className="gap-2"
               >
-                <Send className="h-4 w-4" />
+                <Check className="h-4 w-4" />
                 Approve Quote
               </Button>
-              <Button variant="outline">Request More Info</Button>
-              <Button variant="destructive">Decline Submission</Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  toast({ title: "Info Requested", description: "Additional information request sent to broker." });
+                }}
+                className="gap-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Request More Info
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => {
+                  updateSubmission(id!, (prev) => ({ ...prev, status: "declined" }));
+                  toast({ title: "Submission Declined", description: "Submission has been declined." });
+                  navigate('/underwriter');
+                }}
+                className="gap-2"
+              >
+                <X className="h-4 w-4" />
+                Decline Submission
+              </Button>
             </div>
           )}
         </CardContent>

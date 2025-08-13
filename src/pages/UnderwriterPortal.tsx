@@ -77,7 +77,11 @@ const UnderwriterPortal = () => {
       ? "In Review"
       : s.status === "completed"
       ? "AI Processed"
-      : "Declined";
+      : s.status === "quoted"
+      ? "Quoted"
+      : s.status === "declined"
+      ? "Declined"
+      : "Error";
 
   const filtered = useMemo(() => {
     return subs.filter((s) => {
@@ -142,7 +146,7 @@ const UnderwriterPortal = () => {
     if (confirm("Decline this submission?")) {
       updateSubmission(id, (prev) => ({
         ...prev,
-        status: "error",
+        status: "declined",
         updatedAt: new Date().toISOString(),
       }));
       refreshNow();
@@ -377,14 +381,14 @@ const UnderwriterPortal = () => {
                     <TableCell>{risk || "—"}</TableCell>
                     <TableCell>{premium ? `$${premium.toLocaleString()}` : "—"}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         <Link to={`/underwriter/submission/${s.id}`}>
-                          <Button size="sm" variant="secondary">View</Button>
+                          <Button size="xs" variant="secondary">View</Button>
                         </Link>
                         <Link to={`/underwriter/submission/${s.id}?autoRun=1`}>
-                          <Button size="sm">Run AI</Button>
+                          <Button size="xs">Run AI</Button>
                         </Link>
-                        <Button size="sm" variant="destructive" onClick={() => handleDecline(s.id)}>
+                        <Button size="xs" variant="destructive" onClick={() => handleDecline(s.id)}>
                           Decline
                         </Button>
                       </div>
