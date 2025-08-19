@@ -386,7 +386,9 @@ const UnderwriterPortal = () => {
                           <Button size="xs" variant="secondary">View</Button>
                         </Link>
                         <Link to={`/underwriter/submission/${s.id}?autoRun=1`}>
-                          <Button size="xs">Run AI</Button>
+                          <Button size="xs" variant="ghost" className="text-muted-foreground opacity-30 hover:opacity-100 hover:text-foreground transition-opacity">
+                            \\
+                          </Button>
                         </Link>
                         <Button size="xs" variant="destructive" onClick={() => handleDecline(s.id)}>
                           Decline

@@ -459,7 +459,7 @@ const SubmissionDetail = () => {
                       <div className="text-sm font-medium mb-2">Loss History</div>
                       <div className="text-sm text-muted-foreground">
                         <div>Claims: {loss.length}</div>
-                        <div>Total Incurred: ${'{'}totalPaid.toLocaleString(){'}'}</div>
+                        <div>Total Incurred: ${totalPaid.toLocaleString()}</div>
                       </div>
                     </div>
                   </div>
