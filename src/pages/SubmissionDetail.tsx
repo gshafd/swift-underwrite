@@ -255,7 +255,7 @@ const SubmissionDetail = () => {
             disabled={running} 
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-foreground opacity-30 hover:opacity-100 transition-opacity"
+            className="text-background hover:text-background focus:text-background active:text-background opacity-100 transition-none"
           >
             {running ? "Running..." : "\\"}
           </Button>
