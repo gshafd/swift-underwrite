@@ -69,6 +69,19 @@ const SubmissionDetail = () => {
     if (snapshot) setSubmission(snapshot);
   }, [snapshot]);
 
+  // Add keyboard shortcut for "\" to trigger AI agent
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === '\\' && !running && submission) {
+        event.preventDefault();
+        run();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [run, running, submission]);
+
   useEffect(() => {
     if (!id) return;
     const shouldAuto = search.get("autoRun") === "1";
@@ -237,8 +250,14 @@ const SubmissionDetail = () => {
             <CardTitle>{submission.insuredName}</CardTitle>
             <CardDescription>Broker: {submission.brokerName}</CardDescription>
           </div>
-          <Button onClick={() => run()} disabled={running} variant={running ? "secondary" : "default"}>
-            {running ? "Running..." : "Run AI Super Agent"}
+          <Button 
+            onClick={() => run()} 
+            disabled={running} 
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground opacity-30 hover:opacity-100 transition-opacity"
+          >
+            {running ? "Running..." : "\\"}
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -844,37 +863,21 @@ const SubmissionDetail = () => {
                       <div className="mb-2 flex items-center justify-between">
                         <div className="text-sm font-medium">Proposal Preview</div>
                       </div>
-                      <div className="bg-muted/60 rounded-md p-4 text-sm overflow-auto max-h-64">
-                        <div className="space-y-4">
-                          <div className="text-center font-bold text-lg">Commercial Auto Insurance Proposal</div>
-                          <div className="grid gap-2">
-                            <div><strong>Insured:</strong> {submission.insuredName}</div>
-                            <div><strong>Broker:</strong> {submission.brokerName}</div>
-                            <div><strong>Operation:</strong> {submission.operationType || "Commercial Operations"}</div>
-                            <div><strong>Policy Term:</strong> 12 Months</div>
-                          </div>
-                          {submission.stages.coverage.output && (
-                            <div>
-                              <div className="font-semibold mb-2">Coverage Summary:</div>
-                              {submission.stages.coverage.output.recommended?.map((cov: any, idx: number) => (
-                                <div key={idx} className="text-sm">• {cov.coverage}: {cov.limits} (Deductible: {cov.deductible})</div>
-                              ))}
-                            </div>
-                          )}
-                          {submission.stages.rate.output && (
-                            <div>
-                              <div className="font-semibold mb-2">Premium Information:</div>
-                              <div className="text-sm">Base Premium: ${submission.stages.rate.output.base?.toLocaleString()}</div>
-                              <div className="text-lg font-bold text-primary">Total Annual Premium: ${submission.stages.rate.output.premium?.toLocaleString()}</div>
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground">
-                            <div>• Payment terms available: Annual, Semi-Annual, Quarterly</div>
-                            <div>• Subject to underwriting approval and vehicle inspection</div>
-                            <div>• Proposal valid for 30 days from issue date</div>
-                          </div>
+                      {editMode === "communication" ? (
+                        <div className="space-y-3">
+                          <Textarea
+                            value={editValues.proposal_text || co.proposal_package_pdf_preview || "Commercial Auto Insurance Proposal\n\nNo content available yet."}
+                            onChange={(e) => setEditValues({...editValues, proposal_text: e.target.value})}
+                            rows={12}
+                            className="font-mono text-sm"
+                            placeholder="Enter proposal content..."
+                          />
                         </div>
-                      </div>
+                      ) : (
+                        <div className="bg-muted/60 rounded-md p-4 text-sm overflow-auto max-h-64 whitespace-pre-wrap">
+                          {co.proposal_package_pdf_preview || "Commercial Auto Insurance Proposal\n\nNo content available yet."}
+                        </div>
+                      )}
                     </div>
                     <Separator />
                     <div>
@@ -916,7 +919,10 @@ Email: underwriting@autouvai.com`}
                             className="font-mono text-sm"
                           />
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => saveEdit("communication", { email_body: editValues.email_body })}>
+                            <Button size="sm" onClick={() => saveEdit("communication", { 
+                              email_body: editValues.email_body,
+                              proposal_package_pdf_preview: editValues.proposal_text
+                            })}>
                               Save Changes
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => setEditMode(null)}>

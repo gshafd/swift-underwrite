@@ -42,8 +42,8 @@ const AgentStepper = ({ currentStage, stages, running }: AgentStepperProps) => {
     },
     {
       key: "communication",
-      name: "Communication",
-      description: "Generate proposals",
+      name: "Draft Email Template",
+      description: "Generate email & proposal",
       status: stages.communication.status as any,
     },
   ];
