@@ -81,6 +81,8 @@ const UnderwriterPortal = () => {
       ? "Quoted"
       : s.status === "declined"
       ? "Declined"
+      : s.status === "issued"
+      ? "Approved"
       : "Error";
 
   const filtered = useMemo(() => {
@@ -374,7 +376,7 @@ const UnderwriterPortal = () => {
                     <TableCell className="font-mono text-xs">{s.id.slice(0, 8)}</TableCell>
                     <TableCell>{s.brokerName}</TableCell>
                     <TableCell>{s.insuredName}</TableCell>
-                    <TableCell>{new Date(s.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(s.createdAt).toLocaleDateString('en-US')}</TableCell>
                     <TableCell>{displayStatus(s)}</TableCell>
                     <TableCell>Commercial Auto</TableCell>
                     <TableCell>{fleet || "—"}</TableCell>

@@ -513,38 +513,58 @@ const SubmissionDetail = () => {
                 
                 return editMode === "risk" ? (
                   <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="text-sm font-medium">Risk Score (0-100)</label>
+                        <label className="text-sm font-medium mb-2 block">Risk Score (0-100)</label>
                         <Input
                           type="number"
                           min="0"
                           max="100"
-                          value={editValues.overall_risk_score || ro.overall_risk_score}
+                          value={editValues.overall_risk_score ?? ro.overall_risk_score ?? 0}
                           onChange={(e) => setEditValues({...editValues, overall_risk_score: Number(e.target.value)})}
+                          className="text-lg font-semibold"
                         />
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Current: {ro.overall_risk_score ?? 0}
+                        </div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium">Risk Band</label>
+                        <label className="text-sm font-medium mb-2 block">Risk Band</label>
                         <select 
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                          value={editValues.risk_band || ro.risk_band}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          value={editValues.risk_band ?? ro.risk_band ?? "B"}
                           onChange={(e) => setEditValues({...editValues, risk_band: e.target.value})}
                         >
-                          <option value="A">A (Low Risk)</option>
-                          <option value="B">B (Moderate Risk)</option>
-                          <option value="C">C (High Risk)</option>
+                          <option value="A">A (Low Risk - Score 0-30)</option>
+                          <option value="B">B (Moderate Risk - Score 31-70)</option>
+                          <option value="C">C (High Risk - Score 71-100)</option>
                         </select>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Current: {ro.risk_band ?? "B"} ({ro.risk_band === "A" ? "Low" : ro.risk_band === "B" ? "Moderate" : "High"})
+                        </div>
                       </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Risk Summary</label>
+                      <Textarea
+                        placeholder="Add risk assessment notes..."
+                        value={editValues.risk_summary ?? ro.risk_summary ?? ""}
+                        onChange={(e) => setEditValues({...editValues, risk_summary: e.target.value})}
+                        rows={3}
+                      />
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" onClick={() => saveEdit("risk", {
-                        overall_risk_score: editValues.overall_risk_score || ro.overall_risk_score,
-                        risk_band: editValues.risk_band || ro.risk_band,
+                        overall_risk_score: editValues.overall_risk_score ?? ro.overall_risk_score,
+                        risk_band: editValues.risk_band ?? ro.risk_band,
+                        risk_summary: editValues.risk_summary ?? ro.risk_summary,
                       })}>
                         Save Changes
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditMode(null)}>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setEditMode(null);
+                        setEditValues({});
+                      }}>
                         Cancel
                       </Button>
                     </div>
