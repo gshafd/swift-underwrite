@@ -269,11 +269,13 @@ const UnderwriterPortal = () => {
           </Select>
           <Input
             type="date"
+            placeholder="mm/dd/yyyy"
             value={filters.startDate}
             onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
           />
           <Input
             type="date"
+            placeholder="mm/dd/yyyy"
             value={filters.endDate}
             onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
           />
