@@ -5,10 +5,14 @@ import { Submission } from "@/types/submission";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { FileText, Truck, DollarSign, Shield } from "lucide-react";
+import { FileText, Truck, DollarSign, Shield, CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const UnderwriterPortal = () => {
   const [subs, setSubs] = useState<Submission[]>([]);
@@ -267,18 +271,58 @@ const UnderwriterPortal = () => {
               <SelectItem value="C">C (High)</SelectItem>
             </SelectContent>
           </Select>
-          <Input
-            type="date"
-            placeholder="mm/dd/yyyy"
-            value={filters.startDate}
-            onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-          />
-          <Input
-            type="date"
-            placeholder="mm/dd/yyyy"
-            value={filters.endDate}
-            onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-          />
+<Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filters.startDate ? (
+                  format(new Date(filters.startDate), "MM/dd/yyyy")
+                ) : (
+                  <span>mm/dd/yyyy</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={filters.startDate ? new Date(filters.startDate) : undefined}
+                onSelect={(date) =>
+                  setFilters({
+                    ...filters,
+                    startDate: date ? format(date, "yyyy-MM-dd") : "",
+                  })
+                }
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filters.endDate ? (
+                  format(new Date(filters.endDate), "MM/dd/yyyy")
+                ) : (
+                  <span>mm/dd/yyyy</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={filters.endDate ? new Date(filters.endDate) : undefined}
+                onSelect={(date) =>
+                  setFilters({
+                    ...filters,
+                    endDate: date ? format(date, "yyyy-MM-dd") : "",
+                  })
+                }
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
           <div className="flex items-center gap-2">
             <Input
               type="number"
